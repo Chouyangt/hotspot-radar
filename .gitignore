@@ -1,8 +1,9 @@
 __pycache__/
 *.pyc
 config.json
-out/*.png
-data/*.db-journal
-data/*.db-wal
-data/*.db-shm
 _*.py
+
+# 构建产物与本地数据库：由 Actions 独占维护，本地不提交，
+# 否则每次 push 都会和 workflow 的回写冲突（二进制没法 rebase）
+out/
+data/

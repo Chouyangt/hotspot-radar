@@ -33,6 +33,30 @@
       "cat": "深圳",
       "url": "https://www.sznews.com/",
       "limit": 40,
+      "note": "境外 runner 实测抓不到，国内本机可用",
+      "enabled": true
+    },
+    {
+      "id": "sz_gov_news",
+      "name": "深圳政务动态",
+      "adapter": "gd_news",
+      "cat": "深圳",
+      "site_id": "755001",
+      "pagesize": 50,
+      "keep_classify": ["政务动态"],
+      "limit": 20,
+      "note": "走省统一接口，境外 runner 可达",
+      "enabled": true
+    },
+    {
+      "id": "sz_fabu",
+      "name": "深圳发布",
+      "adapter": "gd_news",
+      "cat": "深圳",
+      "site_id": "755021",
+      "pagesize": 50,
+      "keep_classify": ["政务动态", "新闻动态", "工作动态", "通知公告"],
+      "limit": 20,
       "enabled": true
     },
     {

@@ -228,12 +228,42 @@ def adapt_sznews(src, conf):
     return out[: int(src.get("limit", 40))]
 
 
+def adapt_gd_news(src, conf):
+    """
+    深圳政务资讯：走广东省统一接口（境外 runner 也能通，深圳新闻网首页不行）。
+    这里反过来用白名单，只保留"政务动态/深圳发布"这类资讯类栏目。
+    """
+    from urllib.parse import urlencode
+    q = urlencode({"page": "1", "pagesize": str(src.get("pagesize", 50)),
+                   "isgkml": "1", "order": "1", "callback": "cb"})
+    raw = http_get(f"https://search.gd.gov.cn/jsonp/site/{src['site_id']}?{q}")
+    m = re.search(r"cb\((.*)\)\s*;?\s*$", raw, re.S)
+    payload = json.loads(m.group(1) if m else raw)
+
+    keep = set(src.get("keep_classify") or [])
+    out, seen = [], set()
+    for it in payload.get("results") or []:
+        cls = (it.get("classify_main_name") or "").strip()
+        if keep and cls not in keep:
+            continue
+        title = clean(it.get("title") or "")
+        link = it.get("url") or it.get("post_url") or ""
+        if len(title) < 8 or not link or link in seen:
+            continue
+        seen.add(link)
+        out.append({"title": title[:120], "url": link, "hot": 0, "rank": 0,
+                    "tag": cls, "time": (it.get("pub_time") or "")[:10],
+                    "source": src["name"]})
+    return out[: int(src.get("limit", 30))]
+
+
 ADAPTERS = {
     "weibo_hot": adapt_weibo,
     "toutiao_hot": adapt_toutiao,
     "baidu_hot": adapt_baidu,
     "rss": adapt_rss,
     "sznews": adapt_sznews,
+    "gd_news": adapt_gd_news,
 }
 
 
