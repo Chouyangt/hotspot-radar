@@ -177,9 +177,12 @@ const META = /*__META__*/{};
   }
 
   function foot(){
+    const push = META.push
+      ? `<span style="margin-left:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:1px 8px;color:var(--ink2)">推送：${esc(META.push)}</span>`
+      : '';
     $('#foot').innerHTML = '数据源：' + (META.sources||[]).map(s=>
       `<span class="${s.ok?'ok':'bad'}">${s.ok?'●':'○'} ${esc(s.name)}${s.n?` (${s.n})`:''}</span>`
-    ).join(' ');
+    ).join(' ') + push;
   }
 
   $('#tabs').addEventListener('click', e=>{

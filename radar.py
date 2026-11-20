@@ -431,24 +431,27 @@ def sync(use_ai=False, test_push=False):
     conn.commit()
 
     print(f"本轮新上榜 {len(new_ids)} 条")
-    render(conn, health, len(new_ids))
 
-    # 推送：只推深圳/世界里的高热话题
+    # 推送：只推深圳/世界里的新上榜
     push_msg = ""
-    if (conf.get("notify_min_hot") or 0) > 0 or new_ids:
-        try:
-            import notify
-            rows = conn.execute(
-                "SELECT * FROM items WHERE last_seen=? AND cat IN ('深圳','世界') "
-                "ORDER BY hot DESC, rank ASC LIMIT 8", (stamp,)
-            ).fetchall()
-            hot = [dict(r) for r in rows]
-            if test_push or hot:
-                push_msg = notify.send(hot or [], conf)
-                print(f"  · 推送：{push_msg}")
-        except Exception as e:
-            print(f"  ! 推送失败：{e}")
+    try:
+        import notify
+        rows = conn.execute(
+            "SELECT * FROM items WHERE last_seen=? AND cat IN ('深圳','世界') "
+            "ORDER BY hot DESC, rank ASC LIMIT 8", (stamp,)
+        ).fetchall()
+        hot = [dict(r) for r in rows]
+        if test_push or hot:
+            # 注意：这里不能传 sources 的 conf，notify 要自己读 config.json / CONFIG_JSON
+            push_msg = notify.send(hot)
+            print(f"  · 推送：{push_msg}")
+        else:
+            push_msg = "本轮深圳/世界无新上榜"
+    except Exception as e:
+        push_msg = f"推送异常：{e}"
+        print(f"  ! 推送失败：{e}")
 
+    render(conn, health, len(new_ids), push_msg)
     conn.close()
     return len(new_ids)
 
@@ -478,7 +481,7 @@ def load_view(conn) -> list[dict]:
     return out
 
 
-def render(conn, health=None, new_count=0):
+def render(conn, health=None, new_count=0, push_msg=""):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     data = load_view(conn)
     tpl = TEMPLATE.read_text(encoding="utf-8")
@@ -487,6 +490,7 @@ def render(conn, health=None, new_count=0):
         "today": today(),
         "sources": health or [],
         "new": new_count,
+        "push": push_msg,
     }
     html = (tpl.replace("/*__DATA__*/[]", js_safe(data))
                .replace("/*__META__*/{}", js_safe(meta)))
