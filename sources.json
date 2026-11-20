@@ -1,0 +1,79 @@
+{
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "notify_min_hot": 100000,
+  "sources": [
+    {
+      "id": "weibo_hot",
+      "name": "微博热搜",
+      "adapter": "weibo_hot",
+      "cat": "全网",
+      "url": "https://weibo.com/ajax/side/hotSearch",
+      "enabled": true
+    },
+    {
+      "id": "toutiao_hot",
+      "name": "头条热榜",
+      "adapter": "toutiao_hot",
+      "cat": "全网",
+      "url": "https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc",
+      "enabled": true
+    },
+    {
+      "id": "baidu_hot",
+      "name": "百度热搜",
+      "adapter": "baidu_hot",
+      "cat": "全网",
+      "url": "https://top.baidu.com/board?tab=realtime",
+      "enabled": true
+    },
+    {
+      "id": "sznews",
+      "name": "深圳新闻网",
+      "adapter": "sznews",
+      "cat": "深圳",
+      "url": "https://www.sznews.com/",
+      "limit": 40,
+      "enabled": true
+    },
+    {
+      "id": "chinanews_world",
+      "name": "中新网 · 国际",
+      "adapter": "rss",
+      "cat": "国际",
+      "url": "https://www.chinanews.com.cn/rss/world.xml",
+      "limit": 30,
+      "keep_days": 3,
+      "enabled": true
+    },
+    {
+      "id": "xinhua_world",
+      "name": "新华网 · 国际",
+      "adapter": "rss",
+      "cat": "国际",
+      "url": "http://www.news.cn/world/news_world.xml",
+      "limit": 30,
+      "keep_days": 4,
+      "enabled": true
+    },
+    {
+      "id": "france24",
+      "name": "France24 · World",
+      "adapter": "rss",
+      "cat": "国际",
+      "url": "https://www.france24.com/en/rss",
+      "limit": 20,
+      "keep_days": 3,
+      "enabled": false
+    },
+    {
+      "id": "hackernews",
+      "name": "HackerNews",
+      "adapter": "rss",
+      "cat": "国际",
+      "url": "https://hnrss.org/frontpage",
+      "limit": 15,
+      "keep_days": 2,
+      "enabled": false
+    }
+  ]
+}

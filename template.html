@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>热点雷达 · 深圳 & 世界</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#fff; --ink:#15181c; --ink2:#5b6169; --ink3:#8b929b;
+  --line:#e3e6ea; --accent:#e8590c; --accent2:#2f6fed; --soft:#fff1e8;
+  --sz:#e8590c; --world:#2f6fed; --cn:#7c8794; --hot:#e03131;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0e1116;--panel:#161b22;--ink:#e6edf3;--ink2:#9aa4b2;--ink3:#6b7480;
+        --line:#232a33;--accent:#ff7a45;--accent2:#5b8cff;--soft:#2a1a12;
+        --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 70px}
+
+.top{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.brand h1{margin:0;font-size:21px;font-weight:700;letter-spacing:.4px}
+.brand h1 span{color:var(--accent)}
+.brand p{margin:2px 0 0;font-size:12px;color:var(--ink3)}
+.stats{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 12px;
+  min-width:70px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:18px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat i{font-style:normal;font-size:11px;color:var(--ink3)}
+
+.bar{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:var(--shadow);
+  margin-bottom:16px;position:sticky;top:0;z-index:20}
+.tabs{display:flex;gap:4px;background:var(--bg);border-radius:9px;padding:3px}
+.tab{padding:6px 14px;border-radius:7px;font-size:13px;color:var(--ink2);cursor:pointer;
+  border:none;background:transparent;transition:.15s}
+.tab[aria-selected="true"]{background:var(--panel);color:var(--ink);font-weight:600;
+  box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.tab .n{font-size:11px;color:var(--ink3);margin-left:4px}
+.search{flex:1 1 220px;position:relative}
+.search input{width:100%;padding:8px 12px 8px 30px;border:1px solid var(--line);border-radius:9px;
+  background:var(--bg);color:var(--ink);font-size:13px;outline:none}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+.search::before{content:"⌕";position:absolute;left:10px;top:5px;color:var(--ink3);font-size:15px}
+.tgl{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--bg);
+  font-size:12px;color:var(--ink2);cursor:pointer}
+.tgl[aria-pressed="true"]{border-color:var(--hot);color:var(--hot)}
+
+.list{display:flex;flex-direction:column;gap:8px}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px 12px 52px;position:relative;box-shadow:var(--shadow);transition:.15s}
+.item:hover{border-color:var(--accent);transform:translateY(-1px)}
+.rank{position:absolute;left:14px;top:12px;width:26px;text-align:center;font-size:15px;
+  font-weight:700;color:var(--ink3);font-variant-numeric:tabular-nums}
+.item.top3 .rank{color:var(--hot)}
+.item.top3{background:linear-gradient(180deg,var(--soft),var(--panel) 60%)}
+.ttl{font-size:14.5px;font-weight:600;line-height:1.5;display:block}
+.ttl:hover{color:var(--accent)}
+.meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;
+  font-size:11.5px;color:var(--ink3)}
+.chip{font-size:10.5px;padding:1px 7px;border-radius:5px;border:1px solid var(--line);color:var(--ink2)}
+.c-sz{background:#fff0e8;color:var(--sz);border-color:transparent}
+.c-world{background:#eaf0ff;color:var(--world);border-color:transparent}
+.c-cn{background:#f1f3f5;color:var(--cn);border-color:transparent}
+@media (prefers-color-scheme:dark){
+  .c-sz{background:#2a1a12}.c-world{background:#141d33}.c-cn{background:#1c2229}}
+.hot{color:var(--hot);font-weight:600;font-variant-numeric:tabular-nums}
+.new{background:var(--hot);color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
+.srcs{color:var(--ink3);font-size:11px}
+.empty{text-align:center;color:var(--ink3);padding:60px 0;font-size:13px}
+.foot{margin-top:26px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--ink3)}
+.foot .ok{color:#2f9e44}.foot .bad{color:var(--hot)}
+@media(max-width:620px){
+  .wrap{padding:12px 10px 60px}
+  .item{padding-left:44px}
+  .rank{left:10px;width:22px;font-size:14px}
+  .stat{min-width:62px;padding:5px 10px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">
+      <h1>热点<span>雷达</span></h1>
+      <p>深圳 & 世界 · 更新于 <span id="upd">—</span></p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="bar">
+    <div class="tabs" id="tabs"></div>
+    <div class="search"><input id="q" placeholder="搜标题，例如：APEC、深圳、特朗普" autocomplete="off"></div>
+    <button class="tgl" id="onlynew" aria-pressed="false">只看新上榜</button>
+  </div>
+
+  <div class="list" id="list"></div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/[];
+const META = /*__META__*/{};
+</script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const S = { cat:'全部', q:'', onlyNew:false };
+  const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  const CATS = ['全部','深圳','世界','国内'];
+  const CN = { '深圳':'深圳', '世界':'世界', '国内':'国内' };
+
+  function heat(n){
+    if(!n) return '';
+    if(n >= 100000000) return (n/100000000).toFixed(1)+'亿';
+    if(n >= 10000) return Math.round(n/10000)+'万';
+    return String(n);
+  }
+
+  function stats(){
+    const sz = DATA.filter(d=>d.cat==='深圳').length;
+    const wd = DATA.filter(d=>d.cat==='世界').length;
+    const nw = DATA.filter(d=>d.fresh).length;
+    $('#stats').innerHTML = [
+      ['深圳', sz], ['世界', wd], ['新上榜', nw], ['收录', DATA.length]
+    ].map(([k,v])=>`<div class="stat"><b>${v}</b><i>${k}</i></div>`).join('');
+  }
+
+  function tabs(){
+    $('#tabs').innerHTML = CATS.map(c=>{
+      const n = c==='全部' ? DATA.length : DATA.filter(d=>d.cat===c).length;
+      return `<button class="tab" data-cat="${c}" aria-selected="${c===S.cat}">${c}<span class="n">${n}</span></button>`;
+    }).join('');
+  }
+
+  function match(d){
+    if(S.cat!=='全部' && d.cat!==S.cat) return false;
+    if(S.onlyNew && !d.fresh) return false;
+    if(S.q){
+      const q = S.q.toLowerCase();
+      if(!(d.title+' '+d.src).toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }
+
+  function render(){
+    const rows = DATA.filter(match);
+    if(!rows.length){ $('#list').innerHTML = '<div class="empty">没有匹配的热点，换个词或切个分类。</div>'; return; }
+    $('#list').innerHTML = rows.map((d,i)=>{
+      const ranked = d.hot > 0 || d.rank > 0;
+      const pos = i + 1;                       // 显示序号用列表顺序，不用源内榜位
+      const cls = ['item'];
+      if(ranked && pos <= 3) cls.push('top3');
+      const heatTxt = d.hot ? `<span class="hot">${heat(d.hot)}</span>` : '';
+      const rankTxt = d.rank ? `<span>榜位 ${d.rank}</span>` : '';
+      const timeTxt = d.time ? `<span>${esc(d.time)}</span>` : '';
+      return `<div class="${cls.join(' ')}">
+        <div class="rank">${ranked ? pos : '·'}</div>
+        <a class="ttl" href="${esc(d.url||'#')}" target="_blank" rel="noopener">${esc(d.title)}</a>
+        <div class="meta">
+          <span class="chip c-${d.cat==='深圳'?'sz':d.cat==='世界'?'world':'cn'}">${esc(CN[d.cat]||d.cat)}</span>
+          ${d.fresh?'<span class="new">新</span>':''}
+          ${heatTxt}
+          ${rankTxt}
+          ${timeTxt}
+          <span class="srcs">${esc(d.src)}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function foot(){
+    $('#foot').innerHTML = '数据源：' + (META.sources||[]).map(s=>
+      `<span class="${s.ok?'ok':'bad'}">${s.ok?'●':'○'} ${esc(s.name)}${s.n?` (${s.n})`:''}</span>`
+    ).join(' ');
+  }
+
+  $('#tabs').addEventListener('click', e=>{
+    const b = e.target.closest('.tab'); if(!b) return;
+    S.cat = b.dataset.cat; tabs(); render();
+  });
+  $('#q').addEventListener('input', e=>{ S.q = e.target.value.trim(); render(); });
+  $('#onlynew').addEventListener('click', e=>{
+    S.onlyNew = !S.onlyNew;
+    e.currentTarget.setAttribute('aria-pressed', S.onlyNew);
+    render();
+  });
+
+  stats(); tabs(); render(); foot();
+  $('#upd').textContent = META.updated || '—';
+})();
+</script>
+</body>
+</html>
