@@ -23,6 +23,7 @@ on:
 permissions:
   contents: write
   pages: write
+  actions: write      # 接力要自己调 dispatches，少了这个会 403
   id-token: write
 
 concurrency:
