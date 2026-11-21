@@ -347,6 +347,7 @@ CREATE TABLE IF NOT EXISTS items(
 );
 CREATE INDEX IF NOT EXISTS idx_last ON items(last_seen);
 CREATE TABLE IF NOT EXISTS runs(ts TEXT, source TEXT, ok INTEGER, n INTEGER, note TEXT);
+CREATE TABLE IF NOT EXISTS pushed(id TEXT PRIMARY KEY, ts TEXT);
 """
 
 
@@ -432,21 +433,31 @@ def sync(use_ai=False, test_push=False):
 
     print(f"本轮新上榜 {len(new_ids)} 条")
 
-    # 推送：只推深圳/世界里的新上榜
+    # 推送：只推「本轮首次出现」的深圳/世界话题，同一条 24 小时内不重推
     push_msg = ""
     try:
         import notify
-        rows = conn.execute(
-            "SELECT * FROM items WHERE last_seen=? AND cat IN ('深圳','世界') "
-            "ORDER BY hot DESC, rank ASC LIMIT 8", (stamp,)
-        ).fetchall()
-        hot = [dict(r) for r in rows]
+        since = (now_cst() - timedelta(hours=24)).isoformat(timespec="seconds")
+        if new_ids:
+            ph = ",".join("?" * len(new_ids))
+            rows = conn.execute(
+                f"SELECT * FROM items WHERE id IN ({ph}) AND cat IN ('深圳','世界') "
+                "AND id NOT IN (SELECT id FROM pushed WHERE ts>=?) "
+                "ORDER BY hot DESC, rank ASC LIMIT 6",
+                [*new_ids, since]
+            ).fetchall()
+            hot = [dict(r) for r in rows]
+        else:
+            hot = []
+
         if test_push or hot:
-            # 注意：这里不能传 sources 的 conf，notify 要自己读 config.json / CONFIG_JSON
             push_msg = notify.send(hot)
             print(f"  · 推送：{push_msg}")
+            for h in hot:
+                conn.execute("INSERT OR REPLACE INTO pushed VALUES(?,?)", (h["id"], stamp))
+            conn.commit()
         else:
-            push_msg = "本轮深圳/世界无新上榜"
+            push_msg = "本轮无新话题可推"
     except Exception as e:
         push_msg = f"推送异常：{e}"
         print(f"  ! 推送失败：{e}")

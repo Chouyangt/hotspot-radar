@@ -1,18 +1,23 @@
 name: 热点雷达
 
-# 热点时效性强，15 分钟一轮（GitHub 定时有 5–20 分钟延迟，属正常）
+# 说明：GitHub 的 schedule 不可靠（实测配置 96 次/天，实际 2 次/天）。
+# 所以这里不指望"每 15 分钟触发一次"，而是"触发一次就连续跑几小时"，
+# 循环内部每 15 分钟抓一次并自己推 gh-pages。
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    - cron: "7,27,47 * * * *"
   push:
     branches: [main]
     paths-ignore: ["data/**"]
   workflow_dispatch:
     inputs:
       test_push:
-        description: "强制推一次（不管有没有新上榜）"
+        description: "强制推一次飞书（不管有没有新上榜）"
         type: boolean
         default: false
+      loop_minutes:
+        description: "循环时长（分钟，0=只跑一轮）"
+        default: "0"
 
 permissions:
   contents: write
@@ -26,7 +31,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 350          # 上限 6 小时，留余量
 
     steps:
       - uses: actions/checkout@v4
@@ -35,29 +40,57 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 抓取 + 聚类 + 生成热榜
+      - name: 抓取 + 循环部署
         env:
           CONFIG_JSON: ${{ secrets.CONFIG_JSON }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEST_PUSH: ${{ inputs.test_push }}
         run: |
-          if [ "${{ inputs.test_push }}" = "true" ]; then
-            python radar.py sync --test-push
+          set +e
+          # 定时触发默认循环 4.5 小时；手动触发默认只跑一轮
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            MINUTES="${LOOP_MINUTES_DEFAULT:-270}"
           else
-            python radar.py sync
+            MINUTES="${{ inputs.loop_minutes }}"
+            [ -z "$MINUTES" ] && MINUTES=0
           fi
+          END=$(( $(date +%s) + MINUTES * 60 ))
+          ROUND=0
+
+          deploy() {
+            cd out
+            rm -rf .git
+            git init -q
+            git checkout -q -b gh-pages
+            git add -A
+            git -c user.name=bot -c user.email=bot@users.noreply.github.com \
+                commit -q -m "update $(date -u +%FT%T)" || true
+            git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+            cd ..
+            rm -rf out/.git
+          }
+
+          while :; do
+            ROUND=$((ROUND+1))
+            echo "===== 第 $ROUND 轮 $(date '+%m-%d %H:%M') ====="
+            if [ "$TEST_PUSH" = "true" ]; then
+              python radar.py sync --test-push
+              TEST_PUSH=false
+            else
+              python radar.py sync
+            fi
+            deploy || echo "!! 部署失败，下一轮重试"
+            [ "$(date +%s)" -ge "$END" ] && break
+            sleep 900
+          done
+          echo "循环结束，共 $ROUND 轮"
 
       - name: 存回数据库（first_seen 靠它判断新上榜）
+        if: always()
         run: |
           git config user.name  "hotspot-radar-bot"
           git config user.email "bot@users.noreply.github.com"
           git add -f data/hotspot.db
-          git diff --staged --quiet || git commit -m "chore: 更新热榜 $(date -u +'%m-%d %H:%M')"
+          git diff --staged --quiet || git commit -m "chore: 更新热榜库 $(date -u +'%m-%d %H:%M')"
+          git pull --rebase -q origin main || true
           git push || true
-
-      - name: 部署到 GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./out
-          publish_branch: gh-pages
-          keep_files: false
-          exclude_assets: "*.png"
