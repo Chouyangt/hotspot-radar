@@ -1,8 +1,9 @@
 name: 热点雷达
 
-# 说明：GitHub 的 schedule 不可靠（实测配置 96 次/天，实际 2 次/天）。
-# 所以这里不指望"每 15 分钟触发一次"，而是"触发一次就连续跑几小时"，
-# 循环内部每 15 分钟抓一次并自己推 gh-pages。
+# 双层保障，不依赖任何外部服务：
+#   1) schedule 触发 → 循环跑 5.5 小时，内部每 15 分钟抓取并自部署
+#   2) 循环结束前用 GITHUB_TOKEN 触发下一次（GitHub 官方允许 workflow_dispatch
+#      成为 GITHUB_TOKEN 递归限制的例外），形成接力链；有排队任务时不接力，避免堆积
 on:
   schedule:
     - cron: "7,27,47 * * * *"
@@ -12,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       test_push:
-        description: "强制推一次飞书（不管有没有新上榜）"
+        description: "强制推一次飞书"
         type: boolean
         default: false
       loop_minutes:
@@ -31,7 +32,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 350          # 上限 6 小时，留余量
+    timeout-minutes: 350
 
     steps:
       - uses: actions/checkout@v4
@@ -47,9 +48,8 @@ jobs:
           TEST_PUSH: ${{ inputs.test_push }}
         run: |
           set +e
-          # 定时触发默认循环 4.5 小时；手动触发默认只跑一轮
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            MINUTES="${LOOP_MINUTES_DEFAULT:-270}"
+            MINUTES=330
           else
             MINUTES="${{ inputs.loop_minutes }}"
             [ -z "$MINUTES" ] && MINUTES=0
@@ -85,7 +85,33 @@ jobs:
           done
           echo "循环结束，共 $ROUND 轮"
 
-      - name: 存回数据库（first_seen 靠它判断新上榜）
+      - name: 接力（触发下一段，避免空档）
+        if: success()
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          # 已有排队任务（例如 schedule 触发的）就不再接力，否则队列会越来越长
+          QUEUED=$(curl -sS -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?status=queued&per_page=100" \
+            | python3 -c "import sys,json;print(len(json.load(sys.stdin).get('workflow_runs',[])))" 2>/dev/null)
+          echo "队列中任务数: ${QUEUED:-?}"
+
+          if [ "${QUEUED:-0}" -eq 0 ]; then
+            echo "→ 接力，触发下一段 5.5 小时"
+            curl -sS -X POST \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/radar.yml/dispatches" \
+              -d '{"ref":"main","inputs":{"loop_minutes":"330","test_push":"false"}}' \
+              -w "HTTP %{http_code}\n"
+          else
+            echo "已有任务在排队，本次不接力"
+          fi
+
+      - name: 存回数据库
         if: always()
         run: |
           git config user.name  "hotspot-radar-bot"
